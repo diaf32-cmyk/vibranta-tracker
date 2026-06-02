@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vibranta Tracker</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <style>
@@ -502,7 +502,12 @@ const SERVICE_ROLE_KEY = 'sb_secret_euA8DE8Isv_lIrDWL1ga0g_b5PZrdRU';
 const { createClient } = supabase;
 // Un solo cliente para evitar conflictos en el navegador
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true }
+  auth: { 
+    autoRefreshToken: true, 
+    persistSession: true, 
+    detectSessionInUrl: true,
+    flowType: 'implicit'
+  }
 });
 
 // Función helper para llamadas admin (usa fetch directo, no segundo cliente)
