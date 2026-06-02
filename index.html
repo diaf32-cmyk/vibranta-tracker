@@ -500,8 +500,24 @@ const SUPABASE_KEY     = 'sb_publishable_xwj8Ong10kLY63-HrioVzQ_jPp_whp4';
 // NUNCA la compartas ni la subas pública a GitHub — agrégala después del deploy
 const SERVICE_ROLE_KEY = 'sb_secret_euA8DE8Isv_lIrDWL1ga0g_b5PZrdRU';
 const { createClient } = supabase;
-const sb      = createClient(SUPABASE_URL, SUPABASE_KEY);
-const sbAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY); // Solo Admin usa esta
+// Un solo cliente para evitar conflictos en el navegador
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true }
+});
+
+// Función helper para llamadas admin (usa fetch directo, no segundo cliente)
+async function adminFetch(path, body) {
+  const resp = await fetch(`${SUPABASE_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SERVICE_ROLE_KEY,
+      'Authorization': `Bearer ${SERVICE_ROLE_KEY}`
+    },
+    body: JSON.stringify(body)
+  });
+  return { resp, data: await resp.json() };
+}
 
 // ── STATE ─────────────────────────────────────────────────────
 let currentUser = null;
@@ -523,7 +539,13 @@ async function doLogin() {
   btn.disabled = true; btn.textContent = 'Ingresando...';
   const { error } = await sb.auth.signInWithPassword({ email, password: pass });
   btn.disabled = false; btn.textContent = 'Ingresar';
-  if (error) { err.textContent = 'Credenciales incorrectas. Intenta de nuevo.'; err.classList.add('show'); }
+  if (error) { 
+    console.error('Login error:', error);
+    err.textContent = error.message === 'Email not confirmed' 
+      ? 'Email no confirmado. Contacta al administrador.' 
+      : 'Credenciales incorrectas. Intenta de nuevo.'; 
+    err.classList.add('show'); 
+  }
 }
 
 async function doForgot() {
@@ -1112,23 +1134,17 @@ async function saveProveedor() {
   } else {
     // NUEVO — crear usuario en Auth + registrar en proveedores
     try {
-      // 1. Crear usuario en Supabase Auth e invitarlo por email
-      const resp = await fetch(`${SUPABASE_URL}/auth/v1/invite`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SERVICE_ROLE_KEY,
-          'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
-        },
-        body: JSON.stringify({ email, data: { nombre } }),
+      // 1. Invitar usuario via Supabase Auth API
+      const { resp, data: authResult } = await adminFetch('/auth/v1/invite', {
+        email,
+        data: { nombre },
+        redirect_to: 'https://vibranta-tracker.vercel.app'
       });
 
-      const authResult = await resp.json();
-
       if (!resp.ok) {
-        // Si el usuario ya existe en Auth, igual podemos registrarlo como proveedor
-        if (!authResult.msg?.includes('already registered')) {
-          throw new Error(authResult.msg || 'Error al crear usuario');
+        const errMsg = authResult.error || authResult.msg || JSON.stringify(authResult);
+        if (!errMsg.toLowerCase().includes('already')) {
+          throw new Error(errMsg);
         }
       }
 
