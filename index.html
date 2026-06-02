@@ -540,16 +540,25 @@ async function doLogin() {
   const pass  = document.getElementById('login-pass').value;
   const btn   = document.getElementById('login-btn');
   const err   = document.getElementById('login-err');
+  if (!email || !pass) {
+    err.textContent = 'Ingresa tu email y contraseña.';
+    err.classList.add('show');
+    return;
+  }
   err.classList.remove('show');
   btn.disabled = true; btn.textContent = 'Ingresando...';
-  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
-  btn.disabled = false; btn.textContent = 'Ingresar';
-  if (error) { 
+  try {
+    const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error) throw error;
+  } catch(error) {
     console.error('Login error:', error);
-    err.textContent = error.message === 'Email not confirmed' 
-      ? 'Email no confirmado. Contacta al administrador.' 
-      : 'Credenciales incorrectas. Intenta de nuevo.'; 
-    err.classList.add('show'); 
+    btn.disabled = false; btn.textContent = 'Ingresar';
+    err.textContent = error.message === 'Email not confirmed'
+      ? 'Email no confirmado. Contacta al administrador.'
+      : error.message === 'Invalid login credentials'
+      ? 'Email o contraseña incorrectos.'
+      : 'Error al ingresar. Intenta de nuevo.';
+    err.classList.add('show');
   }
 }
 
