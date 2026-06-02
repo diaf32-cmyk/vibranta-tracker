@@ -548,15 +548,32 @@ async function doLogin() {
   err.classList.remove('show');
   btn.disabled = true; btn.textContent = 'Ingresando...';
   try {
-    const { error } = await sb.auth.signInWithPassword({ email, password: pass });
-    if (error) throw error;
+    // Login manual via fetch (más compatible con nuevas keys sb_publishable)
+    const resp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY
+      },
+      body: JSON.stringify({ email, password: pass })
+    });
+    const result = await resp.json();
+    if (!resp.ok) throw new Error(result.error_description || result.msg || 'Error al ingresar');
+
+    // Establecer sesión manualmente en el cliente Supabase
+    const { error: sessionError } = await sb.auth.setSession({
+      access_token: result.access_token,
+      refresh_token: result.refresh_token
+    });
+    if (sessionError) throw sessionError;
+
   } catch(error) {
     console.error('Login error:', error);
     btn.disabled = false; btn.textContent = 'Ingresar';
-    err.textContent = error.message === 'Email not confirmed'
-      ? 'Email no confirmado. Contacta al administrador.'
-      : error.message === 'Invalid login credentials'
+    err.textContent = error.message.includes('Invalid')
       ? 'Email o contraseña incorrectos.'
+      : error.message === 'Email not confirmed'
+      ? 'Email no confirmado. Contacta al administrador.'
       : 'Error al ingresar. Intenta de nuevo.';
     err.classList.add('show');
   }
