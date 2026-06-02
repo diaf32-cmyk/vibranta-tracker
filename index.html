@@ -548,7 +548,7 @@ async function doLogin() {
   err.classList.remove('show');
   btn.disabled = true; btn.textContent = 'Ingresando...';
   try {
-    // Login manual via fetch (más compatible con nuevas keys sb_publishable)
+    // Login via fetch directo
     const resp = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
       method: 'POST',
       headers: {
@@ -558,23 +558,32 @@ async function doLogin() {
       body: JSON.stringify({ email, password: pass })
     });
     const result = await resp.json();
-    if (!resp.ok) throw new Error(result.error_description || result.msg || 'Error al ingresar');
+    if (!resp.ok) throw new Error(result.error_description || result.msg || 'Credenciales incorrectas');
 
-    // Establecer sesión manualmente en el cliente Supabase
-    const { error: sessionError } = await sb.auth.setSession({
+    // Guardar sesión manualmente en localStorage
+    const sessionKey = 'sb-xuqxlgsfkilcfxnvvfwu-auth-token';
+    const sessionData = {
       access_token: result.access_token,
-      refresh_token: result.refresh_token
-    });
-    if (sessionError) throw sessionError;
+      refresh_token: result.refresh_token,
+      expires_at: result.expires_at,
+      expires_in: result.expires_in,
+      token_type: result.token_type,
+      user: result.user
+    };
+    localStorage.setItem(sessionKey, JSON.stringify(sessionData));
+
+    // Inicializar app directamente con los datos del usuario
+    currentUser = result.user;
+    await initApp();
 
   } catch(error) {
     console.error('Login error:', error);
     btn.disabled = false; btn.textContent = 'Ingresar';
-    err.textContent = error.message.includes('Invalid')
+    err.textContent = error.message.includes('Invalid') || error.message.includes('incorrect')
       ? 'Email o contraseña incorrectos.'
       : error.message === 'Email not confirmed'
       ? 'Email no confirmado. Contacta al administrador.'
-      : 'Error al ingresar. Intenta de nuevo.';
+      : error.message || 'Error al ingresar. Intenta de nuevo.';
     err.classList.add('show');
   }
 }
@@ -587,7 +596,8 @@ async function doForgot() {
 }
 
 async function doLogout() {
-  await sb.auth.signOut();
+  localStorage.removeItem('sb-xuqxlgsfkilcfxnvvfwu-auth-token');
+  await sb.auth.signOut().catch(()=>{});
   document.getElementById('app-wrap').style.display = 'none';
   document.getElementById('login-wrap').style.display = 'flex';
   tiendas = []; campanias = []; proveedores = [];
@@ -600,10 +610,40 @@ sb.auth.onAuthStateChange(async (event, session) => {
     currentUser = session.user;
     await initApp();
   } else {
+    // Check localStorage for manual session
+    const sessionKey = 'sb-xuqxlgsfkilcfxnvvfwu-auth-token';
+    const stored = localStorage.getItem(sessionKey);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed.user && parsed.expires_at > Date.now()/1000) {
+          currentUser = parsed.user;
+          await initApp();
+          return;
+        }
+      } catch(e) {}
+    }
     document.getElementById('login-wrap').style.display = 'flex';
     document.getElementById('app-wrap').style.display  = 'none';
   }
 });
+
+// Check for existing session on load
+(async () => {
+  const sessionKey = 'sb-xuqxlgsfkilcfxnvvfwu-auth-token';
+  const stored = localStorage.getItem(sessionKey);
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      if (parsed.user && parsed.expires_at > Date.now()/1000) {
+        currentUser = parsed.user;
+        await initApp();
+      }
+    } catch(e) {
+      localStorage.removeItem(sessionKey);
+    }
+  }
+})();
 
 async function initApp() {
   // Verificar si es admin
@@ -639,6 +679,18 @@ async function initApp() {
 }
 
 // ── DATA LOADING (Supabase - RLS filtra automáticamente) ──────
+async function getAuthHeaders() {
+  const sessionKey = 'sb-xuqxlgsfkilcfxnvvfwu-auth-token';
+  const stored = localStorage.getItem(sessionKey);
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      return { 'Authorization': `Bearer ${parsed.access_token}` };
+    } catch(e) {}
+  }
+  return {};
+}
+
 async function loadAll() {
   // Tiendas — RLS devuelve solo las del proveedor si no es admin
   const { data: t } = await sb.from('tiendas').select(`
