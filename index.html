@@ -1148,17 +1148,24 @@ async function saveProveedor() {
   } else {
     // NUEVO — crear usuario en Auth + registrar en proveedores
     try {
-      // 1. Invitar usuario via Supabase Auth API
-      const { resp, data: authResult } = await adminFetch('/auth/v1/invite', {
-        email,
-        data: { nombre },
-        redirect_to: 'https://vibranta-tracker.vercel.app'
-      });
-
-      if (!resp.ok) {
-        const errMsg = authResult.error || authResult.msg || JSON.stringify(authResult);
+      // 1. Invitar via Edge Function (seguro, corre en servidor)
+      const inviteResp = await fetch(
+        'https://xuqxlgsfkilcfxnvvfwu.supabase.co/functions/v1/dynamic-function',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'apikey': SUPABASE_KEY
+          },
+          body: JSON.stringify({ email, nombre })
+        }
+      );
+      const inviteResult = await inviteResp.json();
+      if (!inviteResp.ok) {
+        const errMsg = inviteResult.error || '';
         if (!errMsg.toLowerCase().includes('already')) {
-          throw new Error(errMsg);
+          throw new Error(errMsg || 'Error al enviar invitación');
         }
       }
 
