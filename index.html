@@ -1148,14 +1148,15 @@ async function saveProveedor() {
   } else {
     // NUEVO — crear usuario en Auth + registrar en proveedores
     try {
-      // 1. Invitar via Edge Function (seguro, corre en servidor)
+      // 1. Invitar via Edge Function con JWT del usuario autenticado
+      const { data: { session } } = await sb.auth.getSession();
       const inviteResp = await fetch(
         'https://xuqxlgsfkilcfxnvvfwu.supabase.co/functions/v1/dynamic-function',
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Authorization': `Bearer ${session.access_token}`,
             'apikey': SUPABASE_KEY
           },
           body: JSON.stringify({ email, nombre })
