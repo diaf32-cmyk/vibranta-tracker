@@ -645,15 +645,52 @@ sb.auth.onAuthStateChange(async (event, session) => {
   }
 })();
 
+async function getSupabaseHeaders() {
+  const sessionKey = 'sb-xuqxlgsfkilcfxnvvfwu-auth-token';
+  const stored = localStorage.getItem(sessionKey);
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      if (parsed.access_token) {
+        return {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${parsed.access_token}`,
+          'Content-Type': 'application/json'
+        };
+      }
+    } catch(e) {}
+  }
+  return { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' };
+}
+
+async function dbQuery(table, params = '') {
+  const headers = await getSupabaseHeaders();
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`, { headers });
+  if (!resp.ok) return null;
+  return resp.json();
+}
+
 async function initApp() {
-  // Verificar si es admin
-  const { data: adminRow } = await sb.from('admin_emails').select('email').eq('email', currentUser.email).single();
-  isAdmin = !!adminRow;
+  // Verificar si es admin via fetch directo con token
+  const headers = await getSupabaseHeaders();
+  const adminResp = await fetch(
+    `${SUPABASE_URL}/rest/v1/admin_emails?email=eq.${encodeURIComponent(currentUser.email)}&select=email`,
+    { headers }
+  );
+  const adminData = await adminResp.json();
+  isAdmin = Array.isArray(adminData) && adminData.length > 0;
 
   // Si es proveedor, buscar su perfil
   if (!isAdmin) {
-    const { data: prov } = await sb.from('proveedores').select('id,nombre').eq('email', currentUser.email).single();
-    if (prov) { myProvId = prov.id; myProvNombre = prov.nombre; }
+    const provResp = await fetch(
+      `${SUPABASE_URL}/rest/v1/proveedores?email=eq.${encodeURIComponent(currentUser.email)}&select=id,nombre`,
+      { headers }
+    );
+    const provData = await provResp.json();
+    if (Array.isArray(provData) && provData.length > 0) {
+      myProvId = provData[0].id;
+      myProvNombre = provData[0].nombre;
+    }
   }
 
   // UI según rol
@@ -692,26 +729,36 @@ async function getAuthHeaders() {
 }
 
 async function loadAll() {
-  // Tiendas — RLS devuelve solo las del proveedor si no es admin
-  const { data: t } = await sb.from('tiendas').select(`
-    *,
-    campanias:campania_id(nombre, marca, estado),
-    proveedores:proveedor_id(nombre, email)
-  `).order('created_at');
-  tiendas = (t || []).map(r => ({
+  const headers = await getSupabaseHeaders();
+
+  // Tiendas con joins
+  const tResp = await fetch(
+    `${SUPABASE_URL}/rest/v1/tiendas?select=*,campanias:campania_id(nombre,marca,estado),proveedores:proveedor_id(nombre,email)&order=created_at`,
+    { headers }
+  );
+  const t = await tResp.json();
+  tiendas = (Array.isArray(t) ? t : []).map(r => ({
     ...r,
     campania:  r.campanias?.nombre || '—',
     marca:     r.campanias?.marca  || '—',
     proveedor: r.proveedores?.nombre || '—',
   }));
 
-  // Campañas — RLS devuelve solo las que tiene el proveedor
-  const { data: c } = await sb.from('campanias').select('*').order('nombre');
-  campanias = c || [];
+  // Campañas
+  const cResp = await fetch(
+    `${SUPABASE_URL}/rest/v1/campanias?select=*&order=nombre`,
+    { headers }
+  );
+  const c = await cResp.json();
+  campanias = Array.isArray(c) ? c : [];
 
-  // Proveedores — RLS: proveedor solo se ve a sí mismo
-  const { data: p } = await sb.from('proveedores').select('*').order('nombre');
-  proveedores = p || [];
+  // Proveedores
+  const pResp = await fetch(
+    `${SUPABASE_URL}/rest/v1/proveedores?select=*&order=nombre`,
+    { headers }
+  );
+  const p = await pResp.json();
+  proveedores = Array.isArray(p) ? p : [];
 
   populateSelects();
   renderAll();
