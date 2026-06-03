@@ -1369,18 +1369,13 @@ async function saveProveedor() {
   } else {
     // NUEVO — crear usuario en Auth + registrar en proveedores
     try {
-      // 1. Invitar via Edge Function con JWT del usuario autenticado
-      const { data: { session } } = await sb.auth.getSession();
+      // 1. Invitar via Edge Function
       const inviteResp = await fetch(
         'https://xuqxlgsfkilcfxnvvfwu.supabase.co/functions/v1/dynamic-function',
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-            'apikey': SUPABASE_KEY
-          },
-          body: JSON.stringify({ email, nombre })
+          headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+          body: JSON.stringify({ action: 'invite', email, nombre, adminEmail: currentUser.email })
         }
       );
       const inviteResult = await inviteResp.json();
@@ -1421,10 +1416,43 @@ async function saveProveedor() {
 }
 
 async function deleteProveedor(id, nombre) {
-  if (!confirm(`¿Eliminar proveedor "${nombre}"?\n\nSe eliminará de la app pero su cuenta de acceso seguirá activa en Supabase. Para revocar el acceso ve a Supabase → Authentication → Users.`)) return;
-  await sb.from('proveedores').delete().eq('id', id);
+  if (!confirm(`¿Eliminar proveedor "${nombre}"?\n\nSe eliminará de la app Y se revocará su acceso al login.`)) return;
+  
+  // 1. Obtener email del proveedor
+  const prov = proveedores.find(p => p.id === id);
+  const email = prov?.email;
+
+  // 2. Eliminar de tabla proveedores via fetch
+  const headers = await getSupabaseHeaders();
+  await fetch(`${SUPABASE_URL}/rest/v1/proveedores?id=eq.${id}`, {
+    method: 'DELETE',
+    headers
+  });
+
+  // 3. Eliminar de Supabase Auth via Edge Function
+  if (email) {
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      const token = session?.access_token || JSON.parse(localStorage.getItem('sb-xuqxlgsfkilcfxnvvfwu-auth-token') || '{}').access_token;
+      await fetch(
+        'https://xuqxlgsfkilcfxnvvfwu.supabase.co/functions/v1/dynamic-function',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'apikey': SUPABASE_KEY
+          },
+          body: JSON.stringify({ action: 'delete', email })
+        }
+      );
+    } catch(e) {
+      console.warn('No se pudo eliminar de Auth:', e.message);
+    }
+  }
+
   await loadAll();
-  toast('Proveedor eliminado de la app');
+  toast('✓ Proveedor eliminado completamente');
 }
 
 // ── EXPORT ────────────────────────────────────────────────────
