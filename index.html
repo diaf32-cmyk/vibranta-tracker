@@ -248,6 +248,7 @@ body{font-family:var(--ff);background:var(--light);color:var(--dark);min-height:
       <div class="nav-item" onclick="showView('campanias',this)"><i class="ti ti-flag"></i><span>Campañas</span></div>
       <div class="nav-item" id="nav-proveedores" onclick="showView('proveedores',this)"><i class="ti ti-users"></i><span>Proveedores</span></div>
       <div class="nav-item" onclick="showView('tiendas',this)"><i class="ti ti-building-store"></i><span>Tiendas</span></div>
+      <div class="nav-item" id="nav-locales" onclick="showView('locales',this)"><i class="ti ti-map-pin"></i><span>Maestro locales</span></div>
       <div class="nav-section">Control</div>
       <div class="nav-item" onclick="showView('permisos',this)"><i class="ti ti-key"></i><span>Permisos</span><span class="nav-badge" id="badge-perm">0</span></div>
       <div class="nav-item" onclick="showView('instalaciones',this)"><i class="ti ti-hammer"></i><span>Instalaciones</span></div>
@@ -379,6 +380,33 @@ body{font-family:var(--ff);background:var(--light);color:var(--dark);min-height:
         </div>
       </div>
 
+      <!-- LOCALES -->
+      <div class="view" id="view-locales">
+        <div class="panel">
+          <div class="panel-hdr">
+            <i class="ti ti-map-pin" style="color:var(--muted)"></i>
+            <span class="panel-title">Maestro de locales</span>
+            <span class="badge b-neutral" id="loc-count">0</span>
+            <div style="margin-left:auto;display:flex;gap:6px">
+              <input type="text" id="loc-search" placeholder="Buscar local..." oninput="renderLocales()" style="font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;width:180px;font-family:var(--ff);outline:none;">
+              <select id="loc-marca" onchange="renderLocales()" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--white);font-family:var(--ff)">
+                <option value="">Todas las marcas</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" id="btn-nueva-local" onclick="openAddLocal()" style="margin-left:8px"><i class="ti ti-plus"></i> Nuevo local</button>
+          </div>
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead><tr>
+                <th>Mall / Tienda</th><th>Dirección</th><th>Ciudad</th><th>Zona</th>
+                <th>Marcas</th><th>Activo</th><th></th>
+              </tr></thead>
+              <tbody id="loc-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- INSTALACIONES -->
       <div class="view" id="view-instalaciones">
         <div class="panel">
@@ -414,6 +442,12 @@ body{font-family:var(--ff);background:var(--light);color:var(--dark);min-height:
       <div class="form-row-2">
         <div class="form-row"><label class="form-label">Campaña *</label><select class="form-input" id="f-campania"></select></div>
         <div class="form-row"><label class="form-label">Proveedor *</label><select class="form-input" id="f-proveedor"></select></div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Seleccionar desde maestro de locales</label>
+        <select class="form-input" id="f-local-select" onchange="applyLocalData()" style="margin-bottom:8px">
+          <option value="">— O ingresar manualmente —</option>
+        </select>
       </div>
       <div class="form-row"><label class="form-label">Mall / Tienda *</label><input class="form-input" type="text" id="f-mall" placeholder="Ej: Costanera Center"></div>
       <div class="form-row"><label class="form-label">Dirección</label><input class="form-input" type="text" id="f-dir"></div>
@@ -508,6 +542,63 @@ body{font-family:var(--ff);background:var(--light);color:var(--dark);min-height:
   </div>
 </div>
 
+<!-- MODAL LOCAL -->
+<div class="overlay" id="modal-local" onclick="overlayClose(event,'modal-local')">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:480px">
+    <div class="modal-hdr">
+      <h3 id="modal-local-title">Nuevo local</h3>
+      <button class="modal-close" onclick="closeModal('modal-local')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="fl-id">
+      <div class="form-row">
+        <label class="form-label">Mall / Tienda *</label>
+        <input class="form-input" type="text" id="fl-mall" placeholder="Ej: Costanera Center">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Dirección</label>
+        <input class="form-input" type="text" id="fl-dir" placeholder="Ej: Av. Andrés Bello 2425, Local 312">
+      </div>
+      <div class="form-row-2">
+        <div class="form-row">
+          <label class="form-label">Ciudad *</label>
+          <input class="form-input" type="text" id="fl-ciudad" placeholder="Ej: Santiago">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Zona</label>
+          <select class="form-input" id="fl-zona">
+            <option value="RM">RM</option>
+            <option value="Regiones">Regiones</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Marcas asociadas</label>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px" id="fl-marcas-checks">
+          <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer"><input type="checkbox" value="Samsonite"> Samsonite</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer"><input type="checkbox" value="Saxoline"> Saxoline</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer"><input type="checkbox" value="Secret"> Secret</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer"><input type="checkbox" value="Xtream"> Xtream</label>
+          <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer"><input type="checkbox" value="Moulie"> Moulie</label>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Notas</label>
+        <textarea class="form-input" id="fl-notas" rows="2" placeholder="Contacto del mall, horarios de acceso..."></textarea>
+      </div>
+      <div class="form-row">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="fl-activo" checked> Local activo
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-local')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveLocal()"><i class="ti ti-check"></i> Guardar local</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -544,14 +635,17 @@ async function adminFetch(path, body) {
 }
 
 // ── STATE ─────────────────────────────────────────────────────
-let currentUser = null;
-let isAdmin     = false;
-let myProvId    = null;
-let myProvNombre= null;
-let tiendas     = [];
-let campanias   = [];
-let proveedores = [];
-let instTab     = 'todos';
+let currentUser  = null;
+let isAdmin      = false;
+let isCliente    = false;
+let myProvId     = null;
+let myProvNombre = null;
+let myMarca      = null; // Para clientes con acceso por marca
+let tiendas      = [];
+let campanias    = [];
+let proveedores  = [];
+let locales      = []; // Maestro de locales
+let instTab      = 'todos';
 
 // ── AUTH ──────────────────────────────────────────────────────
 // ── DETECT INVITATION LINK ───────────────────────────────────
@@ -701,8 +795,9 @@ async function doLogout() {
   await sb.auth.signOut().catch(()=>{});
   document.getElementById('app-wrap').style.display = 'none';
   document.getElementById('login-wrap').style.display = 'flex';
-  tiendas = []; campanias = []; proveedores = [];
-  currentUser = null; isAdmin = false; myProvId = null;
+  tiendas = []; campanias = []; proveedores = []; locales = [];
+  currentUser = null; isAdmin = false; isCliente = false;
+  myProvId = null; myProvNombre = null; myMarca = null;
 }
 
 // ── SESSION ───────────────────────────────────────────────────
@@ -798,20 +893,40 @@ async function initApp() {
     }
   }
 
+  // Check cliente access if not admin and not proveedor
+  if (!isAdmin && !myProvId) {
+    await checkClienteAccess(currentUser.email);
+  }
+
   // UI según rol
-  const initials = isAdmin ? 'VB' : (myProvNombre||'').split(' ').map(x=>x[0]).join('').substring(0,2).toUpperCase();
+  let rolLabel = 'Administrador';
+  let userName = 'Admin Vibranta';
+  let initials = 'VB';
+  if (!isAdmin && isCliente) {
+    rolLabel = `Cliente · ${myMarca||''}`;
+    userName = currentUser.email.split('@')[0];
+    initials = userName.substring(0,2).toUpperCase();
+  } else if (!isAdmin) {
+    rolLabel = 'Proveedor';
+    userName = myProvNombre || currentUser.email;
+    initials = (myProvNombre||'').split(' ').map(x=>x[0]).join('').substring(0,2).toUpperCase() || 'PR';
+  }
   document.getElementById('s-avatar').textContent = initials;
-  document.getElementById('s-name').textContent   = isAdmin ? 'Admin Vibranta' : (myProvNombre || currentUser.email);
-  document.getElementById('s-role').textContent   = isAdmin ? 'Administrador' : 'Proveedor';
+  document.getElementById('s-name').textContent   = userName;
+  document.getElementById('s-role').textContent   = rolLabel;
 
   // Botones solo para admin
   ['btn-nueva','btn-nueva-camp','btn-nueva-prov'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = isAdmin ? '' : 'none';
   });
-  // Nav proveedores solo para admin
+  // Nav proveedores y locales solo para admin
   const navProv = document.getElementById('nav-proveedores');
   if (navProv) navProv.style.display = isAdmin ? '' : 'none';
+  const navLoc = document.getElementById('nav-locales');
+  if (navLoc) navLoc.style.display = isAdmin ? '' : 'none';
+  const btnLoc = document.getElementById('btn-nueva-local');
+  if (btnLoc) btnLoc.style.display = isAdmin ? '' : 'none';
 
   // Mostrar app
   document.getElementById('login-wrap').style.display = 'none';
@@ -865,8 +980,26 @@ async function loadAll() {
   const p = await pResp.json();
   proveedores = Array.isArray(p) ? p : [];
 
+  // Locales (maestro)
+  const lResp = await fetch(
+    `${SUPABASE_URL}/rest/v1/locales?select=*&order=mall`,
+    { headers }
+  );
+  const l = await lResp.json();
+  locales = Array.isArray(l) ? l : [];
+
   populateSelects();
+  updateLocalSelect();
+  updateMarcaFilter();
   renderAll();
+}
+
+function updateMarcaFilter() {
+  const sel = document.getElementById('loc-marca');
+  if (!sel) return;
+  const marcas = [...new Set(locales.flatMap(l => l.marcas||[]))].sort();
+  sel.innerHTML = '<option value="">Todas las marcas</option>' +
+    marcas.map(m => `<option value="${m}">${m}</option>`).join('');
 }
 
 // ── HELPERS ───────────────────────────────────────────────────
@@ -911,7 +1044,16 @@ function renderDashboard() {
   const data = tiendas;
   const inst = data.filter(s=>s.instalacion==='Finalizada').length;
   const alerts = buildAlerts();
-  const activeCamps = isAdmin ? campanias.filter(c=>c.estado==='Activa').length : [...new Set(data.map(s=>s.campania))].length;
+  // Cliente solo ve campañas de su marca
+  let filteredData = data;
+  if (isCliente && myMarca) {
+    filteredData = data.filter(s => s.marca === myMarca);
+  }
+  const activeCamps = isAdmin 
+    ? campanias.filter(c=>c.estado==='Activa').length 
+    : isCliente 
+    ? [...new Set(filteredData.map(s=>s.campania))].length
+    : [...new Set(data.map(s=>s.campania))].length;
 
   // Banner proveedor
   const banner = document.getElementById('prov-banner');
@@ -1472,6 +1614,7 @@ const viewMeta = {
   campanias:    ['Campañas','Gestión de campañas'],
   proveedores:  ['Proveedores','Gestión de proveedores'],
   tiendas:      ['Tiendas','Listado de tiendas'],
+  locales:      ['Maestro de locales','Base de datos de tiendas y malls'],
   permisos:     ['Permisos','Control de permisos'],
   instalaciones:['Instalaciones','Estado de ejecución'],
   alertas:      ['Alertas','Centro de alertas'],
@@ -1486,6 +1629,134 @@ function showView(name, el) {
   document.getElementById('topbar-sub').textContent   = sub;
 }
 
+// ── MAESTRO DE LOCALES ───────────────────────────────────────
+function renderLocales() {
+  const q = (document.getElementById('loc-search').value||'').toLowerCase();
+  const fm = document.getElementById('loc-marca').value;
+  let data = locales;
+  if (q) data = data.filter(l => (l.mall+l.ciudad+l.direccion).toLowerCase().includes(q));
+  if (fm) data = data.filter(l => (l.marcas||[]).includes(fm));
+  document.getElementById('loc-count').textContent = data.length + ' locales';
+  const canEdit = isAdmin;
+  document.getElementById('loc-tbody').innerHTML = data.map(l => `
+    <tr>
+      <td><b>${l.mall}</b></td>
+      <td style="font-size:11px;color:var(--muted)">${l.direccion||'—'}</td>
+      <td>${l.ciudad}</td>
+      <td><span class="badge b-neutral">${l.zona}</span></td>
+      <td style="font-size:11px">${(l.marcas||[]).map(m=>`<span class="badge b-info" style="margin-right:3px">${m}</span>`).join('')||'—'}</td>
+      <td>${l.activo!==false?'<span class="badge b-ok">✓ Activo</span>':'<span class="badge b-neutral">Inactivo</span>'}</td>
+      <td style="white-space:nowrap">
+        ${canEdit?`<button class="btn" style="padding:4px 6px" onclick="openEditLocal('${l.id}')"><i class="ti ti-edit"></i></button>
+        <button class="btn" style="padding:4px 6px;color:var(--danger)" onclick="deleteLocal('${l.id}','${l.mall}')"><i class="ti ti-trash"></i></button>`:''}
+      </td>
+    </tr>`).join('') || '<tr><td colspan="7"><div class="empty"><p>Sin locales registrados</p></div></td></tr>';
+}
+
+function openAddLocal() {
+  document.getElementById('modal-local-title').textContent = 'Nuevo local';
+  document.getElementById('fl-id').value = '';
+  ['fl-mall','fl-dir','fl-ciudad','fl-notas'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('fl-zona').value = 'RM';
+  document.getElementById('fl-activo').checked = true;
+  document.querySelectorAll('#fl-marcas-checks input[type=checkbox]').forEach(cb => cb.checked = false);
+  document.getElementById('modal-local').classList.add('open');
+}
+
+function openEditLocal(id) {
+  const l = locales.find(x=>x.id===id); if (!l) return;
+  document.getElementById('modal-local-title').textContent = 'Editar local';
+  document.getElementById('fl-id').value = id;
+  document.getElementById('fl-mall').value = l.mall;
+  document.getElementById('fl-dir').value = l.direccion||'';
+  document.getElementById('fl-ciudad').value = l.ciudad;
+  document.getElementById('fl-zona').value = l.zona;
+  document.getElementById('fl-notas').value = l.notas||'';
+  document.getElementById('fl-activo').checked = l.activo !== false;
+  document.querySelectorAll('#fl-marcas-checks input[type=checkbox]').forEach(cb => {
+    cb.checked = (l.marcas||[]).includes(cb.value);
+  });
+  document.getElementById('modal-local').classList.add('open');
+}
+
+async function saveLocal() {
+  const mall   = document.getElementById('fl-mall').value.trim();
+  const ciudad = document.getElementById('fl-ciudad').value.trim();
+  if (!mall || !ciudad) { toast('⚠ Mall y ciudad son obligatorios'); return; }
+  const marcas = Array.from(document.querySelectorAll('#fl-marcas-checks input[type=checkbox]'))
+    .filter(cb => cb.checked).map(cb => cb.value);
+  const id = document.getElementById('fl-id').value;
+  const data = {
+    mall, direccion: document.getElementById('fl-dir').value,
+    ciudad, zona: document.getElementById('fl-zona').value,
+    marcas, notas: document.getElementById('fl-notas').value,
+    activo: document.getElementById('fl-activo').checked
+  };
+  const headers = await getSupabaseHeaders();
+  headers['Content-Type'] = 'application/json';
+  headers['Prefer'] = 'return=representation';
+  let resp;
+  if (id) {
+    resp = await fetch(`${SUPABASE_URL}/rest/v1/locales?id=eq.${id}`, {
+      method: 'PATCH', headers, body: JSON.stringify(data)
+    });
+    toast('✓ Local actualizado');
+  } else {
+    resp = await fetch(`${SUPABASE_URL}/rest/v1/locales`, {
+      method: 'POST', headers, body: JSON.stringify(data)
+    });
+    toast('✓ Local agregado');
+  }
+  closeModal('modal-local');
+  await loadAll();
+  updateLocalSelect();
+}
+
+async function deleteLocal(id, mall) {
+  if (!confirm(`¿Eliminar local "${mall}"?`)) return;
+  const headers = await getSupabaseHeaders();
+  await fetch(`${SUPABASE_URL}/rest/v1/locales?id=eq.${id}`, { method: 'DELETE', headers });
+  await loadAll();
+  updateLocalSelect();
+  toast('Local eliminado');
+}
+
+// Autocomplete en modal de tienda al seleccionar local
+function updateLocalSelect() {
+  const sel = document.getElementById('f-local-select');
+  if (!sel) return;
+  const active = locales.filter(l => l.activo !== false);
+  sel.innerHTML = '<option value="">— Seleccionar local existente —</option>' +
+    active.map(l => `<option value="${l.id}">${l.mall} · ${l.ciudad}</option>`).join('');
+}
+
+function applyLocalData() {
+  const sel = document.getElementById('f-local-select');
+  if (!sel || !sel.value) return;
+  const l = locales.find(x => x.id === sel.value);
+  if (!l) return;
+  document.getElementById('f-mall').value = l.mall;
+  document.getElementById('f-dir').value = l.direccion||'';
+  document.getElementById('f-ciudad').value = l.ciudad;
+  document.getElementById('f-zona').value = l.zona;
+}
+
+// ── CLIENTE ACCESS ────────────────────────────────────────────
+async function checkClienteAccess(email) {
+  const headers = await getSupabaseHeaders();
+  const resp = await fetch(
+    `${SUPABASE_URL}/rest/v1/cliente_accesos?email=eq.${encodeURIComponent(email)}&select=email,marca`,
+    { headers }
+  );
+  const data = await resp.json();
+  if (Array.isArray(data) && data.length > 0) {
+    isCliente = true;
+    myMarca = data[0].marca;
+    return true;
+  }
+  return false;
+}
+
 // ── RENDER ALL ────────────────────────────────────────────────
 function renderAll() {
   renderDashboard();
@@ -1494,6 +1765,7 @@ function renderAll() {
   renderInstalaciones();
   renderCampanias();
   renderProveedores();
+  renderLocales();
 }
 
 // Enter en login
