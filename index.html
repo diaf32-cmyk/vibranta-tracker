@@ -373,7 +373,7 @@ body{font-family:var(--ff);background:var(--light);color:var(--dark);min-height:
             <div style="margin-left:auto;display:flex;gap:6px">
               <select id="p-estado" onchange="renderPermisos()" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--white);font-family:var(--ff)">
                 <option value="">Todos los estados</option>
-                <option value="No solicitado">No solicitado</option><option value="Solicitado">Solicitado</option>
+                <option value="No aplica">No aplica</option><option value="No solicitado">No solicitado</option><option value="Solicitado">Solicitado</option>
                 <option value="En revisión">En revisión</option><option value="Aprobado">Aprobado</option><option value="Rechazado">Rechazado</option>
               </select>
             </div>
@@ -474,8 +474,8 @@ body{font-family:var(--ff);background:var(--light);color:var(--dark);min-height:
         <div class="form-row"><label class="form-label">Fecha compromiso</label><input class="form-input" type="date" id="f-fecha"></div>
       </div>
       <div class="form-row-2">
-        <div class="form-row"><label class="form-label">Permiso</label><select class="form-input" id="f-permiso"><option>No solicitado</option><option>Solicitado</option><option>En revisión</option><option>Aprobado</option><option>Rechazado</option></select></div>
-        <div class="form-row"><label class="form-label">Estado instalación</label><select class="form-input" id="f-instalacion"><option>Pendiente</option><option>Programada</option><option>En ejecución</option><option>Finalizada</option><option>Reprogramada</option></select></div>
+        <div class="form-row"><label class="form-label">Permiso</label><select class="form-input" id="f-permiso"><option>No aplica</option><option>No solicitado</option><option>Solicitado</option><option>En revisión</option><option>Aprobado</option><option>Rechazado</option></select></div>
+        <div class="form-row"><label class="form-label">Estado instalación</label><select class="form-input" id="f-instalacion"><option>No aplica</option><option>Pendiente</option><option>Programada</option><option>En ejecución</option><option>Finalizada</option><option>Reprogramada</option></select></div>
       </div>
       <div class="form-row"><label class="form-label">Observaciones</label><textarea class="form-input" id="f-obs" rows="2"></textarea></div>
     </div>
@@ -593,7 +593,7 @@ body{font-family:var(--ff);background:var(--light);color:var(--dark);min-height:
           <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer"><input type="checkbox" value="Saxoline"> Saxoline</label>
           <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer"><input type="checkbox" value="Secret"> Secret</label>
           <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer"><input type="checkbox" value="Xtream"> Xtream</label>
-          <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer"><input type="checkbox" value="Moulie"> Moulie</label>
+          
         </div>
       </div>
       <div class="form-row">
@@ -645,7 +645,7 @@ body{font-family:var(--ff);background:var(--light);color:var(--dark);min-height:
           <option value="Saxoline">Saxoline</option>
           <option value="Secret">Secret</option>
           <option value="Xtream">Xtream</option>
-          <option value="Moulie">Moulie</option>
+          
         </select>
       </div>
       <div class="form-row">
@@ -1082,9 +1082,9 @@ function updateMarcaFilter() {
 const fmt = d => { if (!d) return '—'; const p = d.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; };
 const daysUntil = d => { if (!d) return null; return Math.round((new Date(d) - new Date().setHours(0,0,0,0)) / 86400000); };
 const pct = (a,b) => b ? Math.round(a/b*100) : 0;
-const isRisk = s => { const d = daysUntil(s.fecha_compromiso); return s.permiso !== 'Aprobado' && d !== null && d <= 3 && d >= 0; };
+const isRisk = s => { const d = daysUntil(s.fecha_compromiso); return s.permiso !== 'Aprobado' && s.permiso !== 'No aplica' && d !== null && d <= 3 && d >= 0; };
 
-const bPerm = p => { const m = {'Aprobado':'b-ok','Solicitado':'b-warn','En revisión':'b-info','No solicitado':'b-neutral','Rechazado':'b-danger'}; return `<span class="badge ${m[p]||'b-neutral'}"><span class="dot"></span>${p}</span>`; };
+const bPerm = p => { const m = {'Aprobado':'b-ok','Solicitado':'b-warn','En revisión':'b-info','No solicitado':'b-neutral','Rechazado':'b-danger','No aplica':'b-neutral'}; return `<span class="badge ${m[p]||'b-neutral'}"><span class="dot"></span>${p}</span>`; };
 const bInst = i => { const m = {'Finalizada':'b-ok','Programada':'b-info','En ejecución':'b-warn','Reprogramada':'b-danger','Pendiente':'b-neutral','Cancelada':'b-danger'}; const ico = {'Finalizada':'✓','Programada':'⏱','En ejecución':'→','Reprogramada':'↺','Pendiente':'○','Cancelada':'✕'}; return `<span class="badge ${m[i]||'b-neutral'}">${ico[i]||''} ${i}</span>`; };
 const bDays = n => { if (n===null) return '—'; if (n<0) return `<span class="badge b-danger">${Math.abs(n)}d atrás</span>`; if (n<=3) return `<span class="badge b-danger">⚠ ${n}d</span>`; if (n<=7) return `<span class="badge b-warn">${n}d</span>`; return `<span class="badge b-ok">${n}d</span>`; };
 const statusBadge = e => ({'Activa':'<span class="badge b-ok">● Activa</span>','Finalizada':'<span class="badge b-neutral">✓ Finalizada</span>','Cancelada':'<span class="badge b-danger">✕ Cancelada</span>'}[e] || '<span class="badge b-info">○ Planificada</span>');
