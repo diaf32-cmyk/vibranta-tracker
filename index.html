@@ -126,6 +126,7 @@ body{font-family:var(--ff);background:var(--light);color:var(--dark);min-height:
 .b-warn{background:var(--warn-bg);color:var(--warn);}
 .b-danger{background:var(--danger-bg);color:var(--danger);}
 .b-info{background:var(--info-bg);color:var(--info);}
+.b-purple{background:var(--purple-bg);color:var(--purple);}
 .b-neutral{background:var(--light);color:var(--mid);}
 .dot{width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block;}
 
@@ -249,6 +250,7 @@ body{font-family:var(--ff);background:var(--light);color:var(--dark);min-height:
       <div class="nav-item" id="nav-proveedores" onclick="showView('proveedores',this)"><i class="ti ti-users"></i><span>Proveedores</span></div>
       <div class="nav-item" onclick="showView('tiendas',this)"><i class="ti ti-building-store"></i><span>Tiendas</span></div>
       <div class="nav-item" id="nav-locales" onclick="showView('locales',this)"><i class="ti ti-map-pin"></i><span>Maestro locales</span></div>
+      <div class="nav-item" id="nav-clientes" onclick="showView('clientes',this)"><i class="ti ti-building"></i><span>Clientes marca</span></div>
       <div class="nav-section">Control</div>
       <div class="nav-item" onclick="showView('permisos',this)"><i class="ti ti-key"></i><span>Permisos</span><span class="nav-badge" id="badge-perm">0</span></div>
       <div class="nav-item" onclick="showView('instalaciones',this)"><i class="ti ti-hammer"></i><span>Instalaciones</span></div>
@@ -405,6 +407,18 @@ body{font-family:var(--ff);background:var(--light);color:var(--dark);min-height:
             </table>
           </div>
         </div>
+      </div>
+
+      <!-- CLIENTES -->
+      <div class="view" id="view-clientes">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div>
+            <div style="font-size:15px;font-weight:600">Clientes de marca</div>
+            <div style="font-size:12px;color:var(--muted)" id="cli-subtitle">—</div>
+          </div>
+          <button class="btn btn-primary" id="btn-nueva-cli" onclick="openAddCliente()"><i class="ti ti-plus"></i> Invitar cliente</button>
+        </div>
+        <div class="cards-grid" id="cli-cards"></div>
       </div>
 
       <!-- INSTALACIONES -->
@@ -595,6 +609,59 @@ body{font-family:var(--ff);background:var(--light);color:var(--dark);min-height:
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-local')">Cancelar</button>
       <button class="btn btn-primary" onclick="saveLocal()"><i class="ti ti-check"></i> Guardar local</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CLIENTE -->
+<div class="overlay" id="modal-cli" onclick="overlayClose(event,'modal-cli')">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:420px">
+    <div class="modal-hdr">
+      <h3 id="modal-cli-title">Invitar cliente de marca</h3>
+      <button class="modal-close" onclick="closeModal('modal-cli')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="fcli-id">
+      <div style="background:var(--info-bg);border:1px solid var(--info-mid);border-radius:8px;padding:12px 14px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start">
+        <i class="ti ti-eye" style="color:var(--info);font-size:18px;flex-shrink:0;margin-top:1px"></i>
+        <div style="font-size:12px;color:var(--info)">
+          <b>Acceso de solo lectura.</b><br>
+          El cliente podrá ver el estado de las campañas de su marca, pero no podrá editar ningún dato.
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Nombre *</label>
+        <input class="form-input" type="text" id="fcli-nombre" placeholder="Ej: Valeria Salzmann">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Email de acceso *</label>
+        <input class="form-input" type="email" id="fcli-email" placeholder="valeria@samsonite.com">
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">Recibirá un email para crear su contraseña</div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Marca que puede visualizar *</label>
+        <select class="form-input" id="fcli-marca">
+          <option value="Samsonite">Samsonite</option>
+          <option value="Saxoline">Saxoline</option>
+          <option value="Secret">Secret</option>
+          <option value="Xtream">Xtream</option>
+          <option value="Moulie">Moulie</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Cargo / Rol</label>
+        <input class="form-input" type="text" id="fcli-cargo" placeholder="Ej: Encargada de marca">
+      </div>
+      <div id="fcli-status" style="display:none;background:var(--success-bg);border:1px solid var(--success);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--success);align-items:center;gap:8px">
+        <i class="ti ti-circle-check" style="font-size:16px"></i>
+        <span id="fcli-status-text"></span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-cli')">Cancelar</button>
+      <button class="btn btn-primary" id="fcli-save-btn" onclick="saveCliente()">
+        <i class="ti ti-send"></i> <span id="fcli-save-label">Invitar y guardar</span>
+      </button>
     </div>
   </div>
 </div>
@@ -927,6 +994,10 @@ async function initApp() {
   if (navLoc) navLoc.style.display = isAdmin ? '' : 'none';
   const btnLoc = document.getElementById('btn-nueva-local');
   if (btnLoc) btnLoc.style.display = isAdmin ? '' : 'none';
+  const navCli = document.getElementById('nav-clientes');
+  if (navCli) navCli.style.display = isAdmin ? '' : 'none';
+  const btnCli = document.getElementById('btn-nueva-cli');
+  if (btnCli) btnCli.style.display = isAdmin ? '' : 'none';
 
   // Mostrar app
   document.getElementById('login-wrap').style.display = 'none';
@@ -987,6 +1058,11 @@ async function loadAll() {
   );
   const l = await lResp.json();
   locales = Array.isArray(l) ? l : [];
+
+  // Clientes de marca
+  const cliResp = await fetch(`${SUPABASE_URL}/rest/v1/cliente_accesos?select=*&order=nombre`, { headers });
+  const cli = await cliResp.json();
+  clientes = Array.isArray(cli) ? cli : [];
 
   populateSelects();
   updateLocalSelect();
@@ -1615,6 +1691,7 @@ const viewMeta = {
   proveedores:  ['Proveedores','Gestión de proveedores'],
   tiendas:      ['Tiendas','Listado de tiendas'],
   locales:      ['Maestro de locales','Base de datos de tiendas y malls'],
+  clientes:     ['Clientes de marca','Accesos de solo lectura para marcas'],
   permisos:     ['Permisos','Control de permisos'],
   instalaciones:['Instalaciones','Estado de ejecución'],
   alertas:      ['Alertas','Centro de alertas'],
@@ -1757,6 +1834,130 @@ async function checkClienteAccess(email) {
   return false;
 }
 
+// ── CLIENTES DE MARCA ────────────────────────────────────────
+let clientes = [];
+
+async function loadClientes() {
+  const headers = await getSupabaseHeaders();
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/cliente_accesos?select=*&order=nombre`, { headers });
+  const data = await resp.json();
+  clientes = Array.isArray(data) ? data : [];
+}
+
+function renderClientes() {
+  const total = clientes.length;
+  const sub = document.getElementById('cli-subtitle');
+  if (sub) sub.textContent = total + ' cliente' + (total!==1?'s':'') + ' registrado' + (total!==1?'s':'');
+  document.getElementById('cli-cards').innerHTML = clientes.map(c => {
+    const initials = (c.nombre||c.email).split(' ').map(x=>x[0]).join('').substring(0,2).toUpperCase();
+    return `<div class="c-card">
+      <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px">
+        <div style="width:42px;height:42px;border-radius:50%;background:var(--purple-bg);color:var(--purple);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${initials}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:600">${c.nombre||'—'}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${c.email}</div>
+          ${c.cargo?`<div style="font-size:11px;color:var(--muted)">${c.cargo}</div>`:''}
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button class="btn" style="padding:4px 7px;color:var(--danger)" onclick="deleteCliente('${c.id}','${c.nombre||c.email}')"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span class="badge b-purple"><i class="ti ti-building" style="font-size:11px"></i> ${c.marca}</span>
+        <span class="badge b-neutral"><i class="ti ti-eye" style="font-size:11px"></i> Solo lectura</span>
+      </div>
+    </div>`;
+  }).join('') || '<div class="empty"><i class="ti ti-building"></i><p>Sin clientes registrados</p></div>';
+}
+
+function openAddCliente() {
+  document.getElementById('modal-cli-title').textContent = 'Invitar cliente de marca';
+  document.getElementById('fcli-id').value = '';
+  ['fcli-nombre','fcli-email','fcli-cargo'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('fcli-marca').value = 'Samsonite';
+  document.getElementById('fcli-email').readOnly = false;
+  document.getElementById('fcli-email').style.background = '';
+  document.getElementById('fcli-save-label').textContent = 'Invitar y guardar';
+  const st = document.getElementById('fcli-status');
+  if (st) st.style.display = 'none';
+  document.getElementById('modal-cli').classList.add('open');
+}
+
+async function saveCliente() {
+  const nombre = document.getElementById('fcli-nombre').value.trim();
+  const email  = document.getElementById('fcli-email').value.trim();
+  const marca  = document.getElementById('fcli-marca').value;
+  if (!nombre || !email) { toast('⚠ Nombre y email son obligatorios'); return; }
+
+  const btn   = document.getElementById('fcli-save-btn');
+  const label = document.getElementById('fcli-save-label');
+  btn.disabled = true; label.textContent = 'Procesando...';
+
+  try {
+    // 1. Invitar via Edge Function
+    const inviteResp = await fetch(
+      'https://xuqxlgsfkilcfxnvvfwu.supabase.co/functions/v1/dynamic-function',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+        body: JSON.stringify({ action: 'invite', email, nombre, adminEmail: currentUser.email })
+      }
+    );
+    const inviteResult = await inviteResp.json();
+    if (!inviteResp.ok) {
+      const errMsg = inviteResult.error || '';
+      if (!errMsg.toLowerCase().includes('already')) throw new Error(errMsg);
+    }
+
+    // 2. Registrar en cliente_accesos
+    const headers = await getSupabaseHeaders();
+    headers['Content-Type'] = 'application/json';
+    headers['Prefer'] = 'return=representation';
+    const dbResp = await fetch(`${SUPABASE_URL}/rest/v1/cliente_accesos`, {
+      method: 'POST', headers,
+      body: JSON.stringify({ nombre, email, marca, cargo: document.getElementById('fcli-cargo').value })
+    });
+    if (!dbResp.ok) {
+      const dbErr = await dbResp.json();
+      throw new Error(dbErr.message || 'Error al guardar');
+    }
+
+    // Éxito
+    btn.disabled = false; label.textContent = 'Invitar y guardar';
+    const st = document.getElementById('fcli-status');
+    const stText = document.getElementById('fcli-status-text');
+    st.style.display = 'flex';
+    stText.textContent = `Invitación enviada a ${email}. Podrá ver las campañas de ${marca}.`;
+    await loadClientes();
+    renderClientes();
+    toast(`✓ Cliente invitado — ${email}`);
+    setTimeout(() => closeModal('modal-cli'), 2500);
+
+  } catch(err) {
+    btn.disabled = false; label.textContent = 'Invitar y guardar';
+    toast('Error: ' + err.message);
+  }
+}
+
+async function deleteCliente(id, nombre) {
+  if (!confirm(`¿Eliminar acceso de "${nombre}"?`)) return;
+  // Eliminar de cliente_accesos
+  const headers = await getSupabaseHeaders();
+  await fetch(`${SUPABASE_URL}/rest/v1/cliente_accesos?id=eq.${id}`, { method: 'DELETE', headers });
+  // Eliminar de Auth
+  const cli = clientes.find(c => c.id === id);
+  if (cli?.email) {
+    await fetch('https://xuqxlgsfkilcfxnvvfwu.supabase.co/functions/v1/dynamic-function', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ action: 'delete', email: cli.email, adminEmail: currentUser.email })
+    }).catch(()=>{});
+  }
+  await loadClientes();
+  renderClientes();
+  toast('Cliente eliminado');
+}
+
 // ── RENDER ALL ────────────────────────────────────────────────
 function renderAll() {
   renderDashboard();
@@ -1766,6 +1967,7 @@ function renderAll() {
   renderCampanias();
   renderProveedores();
   renderLocales();
+  renderClientes();
 }
 
 // Enter en login
