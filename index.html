@@ -253,7 +253,7 @@ body{font-family:var(--ff);background:var(--light);color:var(--dark);min-height:
       <div class="nav-item" id="nav-clientes" onclick="showView('clientes',this)"><i class="ti ti-building"></i><span>Clientes marca</span></div>
       <div class="nav-section">Control</div>
       <div class="nav-item" onclick="showView('permisos',this)"><i class="ti ti-key"></i><span>Permisos</span><span class="nav-badge" id="badge-perm">0</span></div>
-      <div class="nav-item" onclick="showView('instalaciones',this)"><i class="ti ti-hammer"></i><span>Instalaciones</span></div>
+      <div class="nav-item" onclick="showView('instalaciones',this)"><i class="ti ti-hammer"></i><span>Ejecución</span></div>
       <div class="nav-item" onclick="showView('alertas',this)"><i class="ti ti-bell"></i><span>Alertas</span><span class="nav-badge" id="badge-alert">0</span></div>
     </div>
     <div class="sidebar-footer">
@@ -293,11 +293,11 @@ body{font-family:var(--ff);background:var(--light);color:var(--dark);min-height:
           </div>
           <div class="kpi-card">
             <div class="kpi-icon blue"><i class="ti ti-chart-bar"></i></div>
-            <div><div class="kpi-label">Avance promedio</div><div class="kpi-value" id="k-avg">—</div><div class="kpi-link">instalaciones →</div></div>
+            <div><div class="kpi-label">Avance promedio</div><div class="kpi-value" id="k-avg">—</div><div class="kpi-link">ejecución →</div></div>
           </div>
           <div class="kpi-card" onclick="showView('instalaciones',document.querySelectorAll('.nav-item')[5])">
             <div class="kpi-icon orange"><i class="ti ti-circle-check"></i></div>
-            <div><div class="kpi-label">Instaladas</div><div class="kpi-value" id="k-inst">—</div><div class="kpi-link">Ver detalle →</div></div>
+            <div><div class="kpi-label">Ejecutadas</div><div class="kpi-value" id="k-inst">—</div><div class="kpi-link">Ver detalle →</div></div>
           </div>
           <div class="kpi-card" onclick="showView('alertas',document.querySelectorAll('.nav-item')[6])">
             <div class="kpi-icon red"><i class="ti ti-alert-triangle"></i></div>
@@ -312,7 +312,7 @@ body{font-family:var(--ff);background:var(--light);color:var(--dark);min-height:
             </div>
             <div class="panel">
               <div class="panel-hdr"><i class="ti ti-table" style="color:var(--muted)"></i><span class="panel-title">Resumen por campaña</span></div>
-              <div class="tbl-wrap"><table class="stbl"><thead><tr><th>Campaña</th><th>Marca</th><th>Tiendas</th><th>Instaladas</th><th>% Avance</th><th>Estado</th></tr></thead><tbody id="dash-summary-tbody"></tbody></table></div>
+              <div class="tbl-wrap"><table class="stbl"><thead><tr><th>Campaña</th><th>Marca</th><th>Tiendas</th><th>Ejecutadas</th><th>% Avance</th><th>Estado</th></tr></thead><tbody id="dash-summary-tbody"></tbody></table></div>
             </div>
           </div>
           <div class="dash-right">
@@ -361,7 +361,7 @@ body{font-family:var(--ff);background:var(--light);color:var(--dark);min-height:
               </select>
             </div>
           </div>
-          <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Mall / Tienda</th><th>Campaña</th><th>Ciudad</th><th>Proveedor</th><th>Permiso</th><th>Instalación</th><th>Fecha</th><th>Obs.</th><th></th></tr></thead><tbody id="t-tbody"></tbody></table></div>
+          <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Mall / Tienda</th><th>Campaña</th><th>Ciudad</th><th>Proveedor</th><th>Permiso</th><th>Estado ejecución</th><th>Fecha</th><th>Obs.</th><th></th></tr></thead><tbody id="t-tbody"></tbody></table></div>
         </div>
       </div>
 
@@ -425,12 +425,12 @@ body{font-family:var(--ff);background:var(--light);color:var(--dark);min-height:
       <div class="view" id="view-instalaciones">
         <div class="panel">
           <div class="panel-hdr">
-            <i class="ti ti-hammer" style="color:var(--muted)"></i><span class="panel-title">Instalaciones</span><span class="badge b-neutral" id="i-count">0</span>
+            <i class="ti ti-hammer" style="color:var(--muted)"></i><span class="panel-title">Estado de ejecución</span><span class="badge b-neutral" id="i-count">0</span>
             <div style="margin-left:auto;display:flex;gap:4px">
               <button class="btn btn-primary" style="font-size:11px;padding:4px 10px" id="itab-todos" onclick="setInstTab('todos',this)">Todas</button>
               <button class="btn" style="font-size:11px;padding:4px 10px" id="itab-Pendiente" onclick="setInstTab('Pendiente',this)">Pendientes</button>
               <button class="btn" style="font-size:11px;padding:4px 10px" id="itab-Programada" onclick="setInstTab('Programada',this)">Programadas</button>
-              <button class="btn" style="font-size:11px;padding:4px 10px" id="itab-Finalizada" onclick="setInstTab('Finalizada',this)">Finalizadas</button>
+              <button class="btn" style="font-size:11px;padding:4px 10px" id="itab-Finalizada" onclick="setInstTab('Finalizada',this)">Ejecutadas</button>
             </div>
           </div>
           <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Mall / Tienda</th><th>Campaña</th><th>Proveedor</th><th>Tipo</th><th>Estado</th><th>Fecha</th><th>Hora</th><th>Obs.</th><th></th></tr></thead><tbody id="i-tbody"></tbody></table></div>
@@ -475,7 +475,7 @@ body{font-family:var(--ff);background:var(--light);color:var(--dark);min-height:
       </div>
       <div class="form-row-2">
         <div class="form-row"><label class="form-label">Permiso</label><select class="form-input" id="f-permiso"><option>No aplica</option><option>No solicitado</option><option>Solicitado</option><option>En revisión</option><option>Aprobado</option><option>Rechazado</option></select></div>
-        <div class="form-row"><label class="form-label">Estado instalación</label><select class="form-input" id="f-instalacion"><option>No aplica</option><option>Pendiente</option><option>Programada</option><option>En ejecución</option><option>Finalizada</option><option>Reprogramada</option></select></div>
+        <div class="form-row"><label class="form-label">Estado de ejecución</label><select class="form-input" id="f-instalacion"><option>No aplica</option><option>Pendiente</option><option>Programada</option><option>En ejecución</option><option value="Finalizada">Finalizada</option><option>Reprogramada</option></select></div>
       </div>
       <div class="form-row"><label class="form-label">Observaciones</label><textarea class="form-input" id="f-obs" rows="2"></textarea></div>
     </div>
@@ -492,7 +492,7 @@ body{font-family:var(--ff);background:var(--light);color:var(--dark);min-height:
       <div class="form-row"><label class="form-label">Nombre *</label><input class="form-input" type="text" id="fc-nombre"></div>
       <div class="form-row-2">
         <div class="form-row"><label class="form-label">Marca *</label><input class="form-input" type="text" id="fc-marca"></div>
-        <div class="form-row"><label class="form-label">Estado</label><select class="form-input" id="fc-estado"><option>Planificada</option><option>Activa</option><option>Finalizada</option><option>Cancelada</option></select></div>
+        <div class="form-row"><label class="form-label">Estado</label><select class="form-input" id="fc-estado"><option>Planificada</option><option>Activa</option><option value="Finalizada">Finalizada</option><option>Cancelada</option></select></div>
       </div>
       <div class="form-row"><label class="form-label">Responsable</label><input class="form-input" type="text" id="fc-responsable"></div>
       <div class="form-row-2">
@@ -1082,7 +1082,10 @@ function updateMarcaFilter() {
 const fmt = d => { if (!d) return '—'; const p = d.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; };
 const daysUntil = d => { if (!d) return null; return Math.round((new Date(d) - new Date().setHours(0,0,0,0)) / 86400000); };
 const pct = (a,b) => b ? Math.round(a/b*100) : 0;
-const isRisk = s => { const d = daysUntil(s.fecha_compromiso); return s.permiso !== 'Aprobado' && s.permiso !== 'No aplica' && d !== null && d <= 3 && d >= 0; };
+const isRisk = s => { 
+  const d = daysUntil(s.fecha_compromiso); 
+  return s.tipo === 'Instalación' && s.permiso !== 'Aprobado' && s.permiso !== 'No aplica' && d !== null && d <= 3 && d >= 0; 
+};
 
 const bPerm = p => { const m = {'Aprobado':'b-ok','Solicitado':'b-warn','En revisión':'b-info','No solicitado':'b-neutral','Rechazado':'b-danger','No aplica':'b-neutral'}; return `<span class="badge ${m[p]||'b-neutral'}"><span class="dot"></span>${p}</span>`; };
 const bInst = i => { const m = {'Finalizada':'b-ok','Programada':'b-info','En ejecución':'b-warn','Reprogramada':'b-danger','Pendiente':'b-neutral','Cancelada':'b-danger'}; const ico = {'Finalizada':'✓','Programada':'⏱','En ejecución':'→','Reprogramada':'↺','Pendiente':'○','Cancelada':'✕'}; return `<span class="badge ${m[i]||'b-neutral'}">${ico[i]||''} ${i}</span>`; };
@@ -1108,10 +1111,17 @@ function buildAlerts() {
   const alerts = [];
   tiendas.forEach(s => {
     const d = daysUntil(s.fecha_compromiso);
-    if (s.permiso !== 'Aprobado' && d !== null && d <= 3 && d >= 0)
-      alerts.push({type:'red',icon:'ti-clock',title:s.campania,desc:`${s.mall}: instalación en ${d} día${d!==1?'s':''} sin permiso`,time:'Hoy'});
-    if (s.instalacion === 'Reprogramada')
-      alerts.push({type:'orange',icon:'ti-refresh',title:s.campania,desc:`${s.mall}: instalación reprogramada`,time:'Hoy'});
+    // Solo alertar si: es Instalación, requiere permiso, y no está aprobado
+    const requierePermiso = s.tipo === 'Instalación' 
+      && s.permiso !== 'No aplica' 
+      && s.permiso !== 'Aprobado';
+    if (requierePermiso && d !== null && d <= 3 && d >= 0)
+      alerts.push({type:'red',icon:'ti-clock',title:s.campania,
+        desc:`${s.mall}: ejecución en ${d} día${d!==1?'s':''} sin permiso aprobado`,time:'Hoy'});
+    // Reprogramada solo si requiere seguimiento
+    if (s.instalacion === 'Reprogramada' && s.permiso !== 'No aplica')
+      alerts.push({type:'orange',icon:'ti-refresh',title:s.campania,
+        desc:`${s.mall}: ejecución reprogramada`,time:'Hoy'});
   });
   return alerts;
 }
@@ -1352,7 +1362,7 @@ function renderCampanias() {
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div style="background:var(--light);border-radius:7px;padding:10px"><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Tiendas</div><div style="font-size:20px;font-weight:600">${v.total}</div></div>
-        <div style="background:var(--success-bg);border-radius:7px;padding:10px"><div style="font-size:10px;color:var(--success);text-transform:uppercase;letter-spacing:.05em">Instaladas</div><div style="font-size:20px;font-weight:600;color:var(--success)">${v.done}</div></div>
+        <div style="background:var(--success-bg);border-radius:7px;padding:10px"><div style="font-size:10px;color:var(--success);text-transform:uppercase;letter-spacing:.05em">Ejecutadas</div><div style="font-size:20px;font-weight:600;color:var(--success)">${v.done}</div></div>
         <div style="background:var(--info-bg);border-radius:7px;padding:10px"><div style="font-size:10px;color:var(--info);text-transform:uppercase;letter-spacing:.05em">Permisos OK</div><div style="font-size:20px;font-weight:600;color:var(--info)">${v.perm}</div></div>
         <div style="background:${v.risk?'var(--danger-bg)':'var(--light)'};border-radius:7px;padding:10px"><div style="font-size:10px;color:${v.risk?'var(--danger)':'var(--muted)'};text-transform:uppercase;letter-spacing:.05em">En riesgo</div><div style="font-size:20px;font-weight:600;color:${v.risk?'var(--danger)':'var(--muted)'}">${v.risk}</div></div>
       </div>
@@ -1398,7 +1408,7 @@ function renderProveedores() {
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <span class="badge b-neutral">${v.total} tienda${v.total!==1?'s':''}</span>
-        <span class="badge b-ok">✓ ${v.done} instaladas</span>
+        <span class="badge b-ok">✓ ${v.done} ejecutadas</span>
       </div>
     </div>`;
   }).join('') || '<div class="empty"><i class="ti ti-users"></i><p>Sin proveedores registrados</p></div>';
@@ -1693,7 +1703,7 @@ const viewMeta = {
   locales:      ['Maestro de locales','Base de datos de tiendas y malls'],
   clientes:     ['Clientes de marca','Accesos de solo lectura para marcas'],
   permisos:     ['Permisos','Control de permisos'],
-  instalaciones:['Instalaciones','Estado de ejecución'],
+  instalaciones:['Ejecución','Estado de ejecución por tienda'],
   alertas:      ['Alertas','Centro de alertas'],
 };
 function showView(name, el) {
