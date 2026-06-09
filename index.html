@@ -1826,12 +1826,8 @@ async function importFromExcel(input) {
         if (marcaRaw) lastMarca = marcaMap[marcaRaw.toUpperCase()] || marcaRaw;
         const marca = lastMarca;
 
-        // Clean mall name (remove brand prefix)
-        let mall = tienda;
-        for (const pfx of ['XTREM ','SECRET ','SAXOLINE ','SAMSONITE ']) {
-          if (mall.toUpperCase().startsWith(pfx)) { mall = mall.substring(pfx.length); break; }
-        }
-        mall = mall.split(' ').map(w => w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');
+        // Guardar nombre completo de la tienda tal como viene en el Excel
+        let mall = tienda.split(' ').map(w => w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');
 
         const ciudadClean = ciudad.split(' ').map(w => w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');
         const zona = rmCities.includes(ciudad.toUpperCase().trim()) ? 'RM' : 'Regiones';
