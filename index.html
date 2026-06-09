@@ -7,6 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -395,7 +396,9 @@ body{font-family:var(--ff);background:var(--light);color:var(--dark);min-height:
                 <option value="">Todas las marcas</option>
               </select>
             </div>
-            <button class="btn btn-primary" id="btn-nueva-local" onclick="openAddLocal()" style="margin-left:8px"><i class="ti ti-plus"></i> Nuevo local</button>
+            <button class="btn" id="btn-import-local" onclick="document.getElementById('excel-import-input').click()" style="margin-left:8px"><i class="ti ti-upload"></i> Importar Excel</button>
+            <input type="file" id="excel-import-input" accept=".xlsx,.xls" style="display:none" onchange="importFromExcel(this)">
+            <button class="btn btn-primary" id="btn-nueva-local" onclick="openAddLocal()" style="margin-left:4px"><i class="ti ti-plus"></i> Nuevo local</button>
           </div>
           <div class="tbl-wrap">
             <table class="tbl">
@@ -994,6 +997,8 @@ async function initApp() {
   if (navLoc) navLoc.style.display = isAdmin ? '' : 'none';
   const btnLoc = document.getElementById('btn-nueva-local');
   if (btnLoc) btnLoc.style.display = isAdmin ? '' : 'none';
+  const btnImp = document.getElementById('btn-import-local');
+  if (btnImp) btnImp.style.display = isAdmin ? '' : 'none';
   const navCli = document.getElementById('nav-clientes');
   if (navCli) navCli.style.display = isAdmin ? '' : 'none';
   const btnCli = document.getElementById('btn-nueva-cli');
@@ -1764,6 +1769,111 @@ function openEditLocal(id) {
     cb.checked = (l.marcas||[]).includes(cb.value);
   });
   document.getElementById('modal-local').classList.add('open');
+}
+
+async function importFromExcel(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = ''; // reset
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      // Detect columns — look for header row
+      let headerRow = -1;
+      let colMarca = -1, colTienda = -1, colDir = -1, colCiudad = -1;
+      for (let i = 0; i < Math.min(rows.length, 5); i++) {
+        const r = rows[i].map(c => String(c).toUpperCase().trim());
+        const ti = r.findIndex(c => c.includes('TIENDA') || c.includes('LOCAL') || c.includes('NOMBRE'));
+        const di = r.findIndex(c => c.includes('DIREC'));
+        const ci = r.findIndex(c => c.includes('CIUDAD'));
+        const mi = r.findIndex(c => c.includes('MARCA'));
+        if (ti >= 0 || di >= 0) {
+          headerRow = i; colTienda = ti; colDir = di; colCiudad = ci; colMarca = mi; break;
+        }
+      }
+
+      // If no header found, assume columns: marca=0, tienda=1, dir=2, ciudad=3
+      if (headerRow === -1) { colMarca=0; colTienda=1; colDir=2; colCiudad=3; }
+
+      const rmCities = ['SANTIAGO','SAN BERNARDO','MAIPÚ','MAIPU','PUENTE ALTO','LA FLORIDA',
+        'HUECHURABA','LA REINA','CERRILLOS','ÑUÑOA','NUÑOA','ESTACION CENTRAL','PROVIDENCIA'];
+      const marcaMap = {
+        'TIENDAS XTREM':'Xtream','TIENDAS SECRET':'Secret','TIENDAS SAXOLINE':'Saxoline',
+        'TIENDAS SAMSONITE':'Samsonite','TIENDAS OUTLET':'Saxoline',
+        'XTREM':'Xtream','SECRET':'Secret','SAXOLINE':'Saxoline','SAMSONITE':'Samsonite'
+      };
+
+      let importedLocales = [];
+      let lastMarca = '';
+      const startRow = headerRow >= 0 ? headerRow + 1 : 0;
+
+      for (let i = startRow; i < rows.length; i++) {
+        const row = rows[i];
+        const tienda = colTienda >= 0 ? String(row[colTienda]||'').trim() : '';
+        const dir    = colDir >= 0    ? String(row[colDir]||'').trim() : '';
+        const ciudad = colCiudad >= 0 ? String(row[colCiudad]||'').trim() : '';
+        const marcaRaw = colMarca >= 0 ? String(row[colMarca]||'').trim() : '';
+
+        if (!tienda) continue;
+
+        // Update marca if new one found
+        if (marcaRaw) lastMarca = marcaMap[marcaRaw.toUpperCase()] || marcaRaw;
+        const marca = lastMarca;
+
+        // Clean mall name (remove brand prefix)
+        let mall = tienda;
+        for (const pfx of ['XTREM ','SECRET ','SAXOLINE ','SAMSONITE ']) {
+          if (mall.toUpperCase().startsWith(pfx)) { mall = mall.substring(pfx.length); break; }
+        }
+        mall = mall.split(' ').map(w => w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');
+
+        const ciudadClean = ciudad.split(' ').map(w => w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');
+        const zona = rmCities.includes(ciudad.toUpperCase().trim()) ? 'RM' : 'Regiones';
+
+        importedLocales.push({ mall, direccion: dir, ciudad: ciudadClean, zona, marcas: marca ? [marca] : [], activo: true });
+      }
+
+      if (!importedLocales.length) { toast('⚠ No se encontraron locales válidos en el archivo'); return; }
+
+      // Show preview
+      const confirmed = confirm(
+        `Se encontraron ${importedLocales.length} locales en el archivo.\n\n` +
+        `Primeros 3:\n` +
+        importedLocales.slice(0,3).map(l => `• ${l.mall} — ${l.ciudad}`).join('\n') +
+        `\n\n¿Importar todos?`
+      );
+      if (!confirmed) return;
+
+      // Insert all into Supabase
+      const headers = await getSupabaseHeaders();
+      headers['Content-Type'] = 'application/json';
+      headers['Prefer'] = 'return=representation';
+      
+      let ok = 0, err = 0;
+      // Insert in batches of 20
+      for (let i = 0; i < importedLocales.length; i += 20) {
+        const batch = importedLocales.slice(i, i+20);
+        const resp = await fetch(`${SUPABASE_URL}/rest/v1/locales`, {
+          method: 'POST', headers, body: JSON.stringify(batch)
+        });
+        if (resp.ok) ok += batch.length; else err += batch.length;
+      }
+
+      await loadAll();
+      toast(`✓ ${ok} locales importados${err ? ` (${err} con error)` : ''}`);
+
+    } catch(e) {
+      console.error(e);
+      toast('Error al leer el archivo: ' + e.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
 }
 
 async function saveLocal() {
