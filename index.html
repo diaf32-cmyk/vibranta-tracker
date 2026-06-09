@@ -1774,7 +1774,7 @@ function openEditLocal(id) {
 async function importFromExcel(input) {
   const file = input.files[0];
   if (!file) return;
-  input.value = ''; // reset
+  input.value = '';
 
   const reader = new FileReader();
   reader.onload = async (e) => {
@@ -1784,85 +1784,111 @@ async function importFromExcel(input) {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-      // Detect columns — look for header row
-      let headerRow = -1;
-      let colMarca = -1, colTienda = -1, colDir = -1, colCiudad = -1;
+      // Find header row (contains NOMBRE TIENDA or TIENDA)
+      let headerIdx = 0;
+      let colMarca = 0, colTienda = 1, colDir = 2, colCiudad = 3;
       for (let i = 0; i < Math.min(rows.length, 5); i++) {
         const r = rows[i].map(c => String(c).toUpperCase().trim());
-        const ti = r.findIndex(c => c.includes('TIENDA') || c.includes('LOCAL') || c.includes('NOMBRE'));
-        const di = r.findIndex(c => c.includes('DIREC'));
-        const ci = r.findIndex(c => c.includes('CIUDAD'));
-        const mi = r.findIndex(c => c.includes('MARCA'));
-        if (ti >= 0 || di >= 0) {
-          headerRow = i; colTienda = ti; colDir = di; colCiudad = ci; colMarca = mi; break;
+        if (r.some(c => c.includes('TIENDA') || c.includes('LOCAL'))) {
+          headerIdx = i;
+          colMarca  = r.findIndex(c => c.includes('MARCA'));
+          colTienda = r.findIndex(c => c.includes('TIENDA') || c.includes('LOCAL'));
+          colDir    = r.findIndex(c => c.includes('DIREC'));
+          colCiudad = r.findIndex(c => c.includes('CIUDAD'));
+          if (colMarca < 0)  colMarca  = 0;
+          if (colTienda < 0) colTienda = 1;
+          if (colDir < 0)    colDir    = 2;
+          if (colCiudad < 0) colCiudad = 3;
+          break;
         }
       }
 
-      // If no header found, assume columns: marca=0, tienda=1, dir=2, ciudad=3
-      if (headerRow === -1) { colMarca=0; colTienda=1; colDir=2; colCiudad=3; }
-
-      const rmCities = ['SANTIAGO','SAN BERNARDO','MAIPÚ','MAIPU','PUENTE ALTO','LA FLORIDA',
-        'HUECHURABA','LA REINA','CERRILLOS','ÑUÑOA','NUÑOA','ESTACION CENTRAL','PROVIDENCIA'];
       const marcaMap = {
-        'TIENDAS XTREM':'Xtream','TIENDAS SECRET':'Secret','TIENDAS SAXOLINE':'Saxoline',
-        'TIENDAS SAMSONITE':'Samsonite','TIENDAS OUTLET':'Saxoline',
-        'XTREM':'Xtream','SECRET':'Secret','SAXOLINE':'Saxoline','SAMSONITE':'Samsonite'
+        'TIENDAS XTREM':'Xtream', 'TIENDAS SECRET':'Secret',
+        'TIENDAS SAXOLINE':'Saxoline', 'TIENDAS SAMSONITE':'Samsonite',
+        'TIENDAS OUTLET':'Saxoline',
+        'XTREAM':'Xtream','XTREM':'Xtream','SECRET':'Secret',
+        'SAXOLINE':'Saxoline','SAMSONITE':'Samsonite'
       };
+      const rmCities = ['SANTIAGO','SAN BERNARDO','MAIPÚ','MAIPU','PUENTE ALTO',
+        'LA FLORIDA','HUECHURABA','LA REINA','CERRILLOS','ÑUÑOA','NUÑOA',
+        'ESTACION CENTRAL','PROVIDENCIA','LAS CONDES','VITACURA','PEÑALOLEN'];
 
       let importedLocales = [];
       let lastMarca = '';
-      const startRow = headerRow >= 0 ? headerRow + 1 : 0;
 
-      for (let i = startRow; i < rows.length; i++) {
+      for (let i = headerIdx + 1; i < rows.length; i++) {
         const row = rows[i];
-        const tienda = colTienda >= 0 ? String(row[colTienda]||'').trim() : '';
-        const dir    = colDir >= 0    ? String(row[colDir]||'').trim() : '';
-        const ciudad = colCiudad >= 0 ? String(row[colCiudad]||'').trim() : '';
-        const marcaRaw = colMarca >= 0 ? String(row[colMarca]||'').trim() : '';
+        // Tomar datos exactamente como vienen en el Excel
+        const tiendaRaw = String(row[colTienda] || '').trim();
+        const dirRaw    = String(row[colDir]    || '').trim();
+        const ciudadRaw = String(row[colCiudad] || '').trim();
+        const marcaRaw  = String(row[colMarca]  || '').trim();
 
-        if (!tienda) continue;
+        // Skip empty rows
+        if (!tiendaRaw) continue;
 
-        // Update marca if new one found
-        if (marcaRaw) lastMarca = marcaMap[marcaRaw.toUpperCase()] || marcaRaw;
-        const marca = lastMarca;
+        // Update marca si viene en esta fila
+        if (marcaRaw) {
+          lastMarca = marcaMap[marcaRaw.toUpperCase()] || marcaRaw;
+        }
 
-        // Guardar nombre completo de la tienda tal como viene en el Excel
-        let mall = tienda.split(' ').map(w => w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');
+        // Nombre de tienda tal como está en el Excel (solo capitalizar primera letra de cada palabra)
+        const nombreTienda = tiendaRaw.split(' ')
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+          .join(' ');
 
-        const ciudadClean = ciudad.split(' ').map(w => w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' ');
-        const zona = rmCities.includes(ciudad.toUpperCase().trim()) ? 'RM' : 'Regiones';
+        // Ciudad capitalizada
+        const ciudadClean = ciudadRaw.split(' ')
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+          .join(' ');
 
-        importedLocales.push({ mall, direccion: dir, ciudad: ciudadClean, zona, marcas: marca ? [marca] : [], activo: true });
+        // Zona según ciudad
+        const zona = rmCities.includes(ciudadRaw.toUpperCase().trim()) ? 'RM' : 'Regiones';
+
+        importedLocales.push({
+          mall:      nombreTienda,   // Nombre completo de tienda del Excel
+          direccion: dirRaw,         // Dirección exacta del Excel
+          ciudad:    ciudadClean,    // Ciudad del Excel
+          zona,
+          marcas:    lastMarca ? [lastMarca] : [],
+          activo:    true,
+          notas:     ''
+        });
       }
 
-      if (!importedLocales.length) { toast('⚠ No se encontraron locales válidos en el archivo'); return; }
+      if (!importedLocales.length) {
+        toast('⚠ No se encontraron tiendas válidas en el archivo');
+        return;
+      }
 
-      // Show preview
+      // Preview antes de confirmar
+      const preview = importedLocales.slice(0,3).map(l =>
+        `• ${l.mall}\n  ${l.direccion}\n  ${l.ciudad} (${l.zona}) — ${l.marcas[0]||'Sin marca'}`
+      ).join('\n\n');
+
       const confirmed = confirm(
-        `Se encontraron ${importedLocales.length} locales en el archivo.\n\n` +
-        `Primeros 3:\n` +
-        importedLocales.slice(0,3).map(l => `• ${l.mall} — ${l.ciudad}`).join('\n') +
-        `\n\n¿Importar todos?`
+        `Se encontraron ${importedLocales.length} tiendas.\n\nVista previa:\n\n${preview}\n\n¿Importar todas?`
       );
       if (!confirmed) return;
 
-      // Insert all into Supabase
+      // Insertar en Supabase en lotes de 20
       const headers = await getSupabaseHeaders();
       headers['Content-Type'] = 'application/json';
-      headers['Prefer'] = 'return=representation';
-      
-      let ok = 0, err = 0;
-      // Insert in batches of 20
+      headers['Prefer'] = 'return=minimal';
+
+      let ok = 0, errCount = 0;
       for (let i = 0; i < importedLocales.length; i += 20) {
-        const batch = importedLocales.slice(i, i+20);
+        const batch = importedLocales.slice(i, i + 20);
         const resp = await fetch(`${SUPABASE_URL}/rest/v1/locales`, {
           method: 'POST', headers, body: JSON.stringify(batch)
         });
-        if (resp.ok) ok += batch.length; else err += batch.length;
+        if (resp.ok) ok += batch.length;
+        else { errCount += batch.length; console.error(await resp.text()); }
       }
 
       await loadAll();
-      toast(`✓ ${ok} locales importados${err ? ` (${err} con error)` : ''}`);
+      toast(`✓ ${ok} tiendas importadas al maestro de locales${errCount ? ` · ${errCount} con error` : ''}`);
 
     } catch(e) {
       console.error(e);
@@ -1871,6 +1897,7 @@ async function importFromExcel(input) {
   };
   reader.readAsArrayBuffer(file);
 }
+
 
 async function saveLocal() {
   const mall   = document.getElementById('fl-mall').value.trim();
@@ -1918,9 +1945,14 @@ async function deleteLocal(id, mall) {
 function updateLocalSelect() {
   const sel = document.getElementById('f-local-select');
   if (!sel) return;
-  const active = locales.filter(l => l.activo !== false);
-  sel.innerHTML = '<option value="">— Seleccionar local existente —</option>' +
-    active.map(l => `<option value="${l.id}">${l.mall} · ${l.ciudad}</option>`).join('');
+  const active = locales.filter(l => l.activo !== false)
+    .sort((a,b) => a.mall.localeCompare(b.mall));
+  sel.innerHTML = '<option value="">— Seleccionar tienda del maestro —</option>' +
+    active.map(l => {
+      const marca = (l.marcas||[]).join('/');
+      const label = marca ? `${l.mall} · ${l.ciudad} [${marca}]` : `${l.mall} · ${l.ciudad}`;
+      return `<option value="${l.id}">${label}</option>`;
+    }).join('');
 }
 
 function applyLocalData() {
